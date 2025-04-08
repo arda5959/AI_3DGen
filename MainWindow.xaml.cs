@@ -5,6 +5,7 @@ using System.Windows.Media;
 using System.Windows.Controls;
 using Microsoft.Win32;
 using System.Diagnostics;
+using System.Threading.Tasks;
 
 namespace AI_3DGen
 {
@@ -33,7 +34,7 @@ namespace AI_3DGen
         {
             var initialMessage = new Border
             {
-                Style = (Style)FindResource("AIMessageStyle"),
+                Style = (Style)FindResource("AIMessageStyle") ?? throw new InvalidOperationException("AIMessageStyle bulunamadı"),
                 Margin = new Thickness(0, 0, 0, 20),
                 Child = new TextBlock
                 {
@@ -50,8 +51,9 @@ namespace AI_3DGen
         private void InputTextBox_GotFocus(object sender, RoutedEventArgs e)
         {
             var textBox = sender as TextBox;
-            if (textBox != null)
+            if (textBox != null && textBox.Text == "Model açıklamasını girin...")
             {
+                textBox.Text = "";
                 textBox.SelectAll();
             }
         }
@@ -65,13 +67,14 @@ namespace AI_3DGen
             }
         }
 
-        private void SendMessageButton_Click(object sender, RoutedEventArgs e)
+        private async void SendMessageButton_Click(object sender, RoutedEventArgs e)
         {
             var message = InputTextBox.Text.Trim();
             if (!string.IsNullOrEmpty(message) && message != "Model açıklamasını girin...")
             {
                 AddUserMessage(message);
                 InputTextBox.Text = "Model açıklamasını girin...";
+                
                 if (string.IsNullOrEmpty(_blenderIntegration.BlenderPath))
                 {
                     AddAIMessage("Lütfen Blender yolu seçin.");
@@ -81,7 +84,7 @@ namespace AI_3DGen
                     AddAIMessage("Model oluşturuluyor. Lütfen bekleyin...");
                     try
                     {
-                        var result = _blenderIntegration.GenerateModelAsync(message).Result;
+                        var result = await _blenderIntegration.GenerateModelAsync(message);
                         AddAIMessage($"Model başarıyla oluşturuldu: {result}");
                     }
                     catch (Exception ex)
@@ -92,12 +95,16 @@ namespace AI_3DGen
             }
         }
 
-        private void InputTextBox_KeyDown(object sender, KeyEventArgs e)
+        private async void InputTextBox_KeyDown(object sender, KeyEventArgs e)
         {
             if (e.Key == Key.Enter && !e.IsRepeat)
             {
                 e.Handled = true;
-                SendMessageButton_Click(null, null);
+                await Task.Run(() => 
+                {
+                    var dummyEventArgs = new RoutedEventArgs();
+                    SendMessageButton_Click(this, dummyEventArgs);
+                });
             }
         }
 
@@ -105,7 +112,7 @@ namespace AI_3DGen
         {
             var userMessage = new Border
             {
-                Style = (Style)FindResource("UserMessageStyle"),
+                Style = (Style)FindResource("UserMessageStyle") ?? throw new InvalidOperationException("UserMessageStyle bulunamadı"),
                 Child = new TextBlock
                 {
                     Text = message,
@@ -123,7 +130,7 @@ namespace AI_3DGen
         {
             var aiMessage = new Border
             {
-                Style = (Style)FindResource("AIMessageStyle"),
+                Style = (Style)FindResource("AIMessageStyle") ?? throw new InvalidOperationException("AIMessageStyle bulunamadı"),
                 Child = new TextBlock
                 {
                     Text = message,
@@ -149,51 +156,11 @@ namespace AI_3DGen
             if (openFileDialog.ShowDialog() == true)
             {
                 _blenderIntegration.BlenderPath = openFileDialog.FileName;
+                AddAIMessage($"Blender yolu seçildi: {openFileDialog.FileName}");
             }
-        }
-    }
-
-    public class BlenderIntegration
-    {
-        public string BlenderPath { get; set; }
-
-        public async Task<string> GenerateModelAsync(string description)
-        {
-            if (string.IsNullOrEmpty(BlenderPath))
+            else
             {
-                throw new InvalidOperationException("Blender yolu belirtilmemiş");
-            }
-
-            try
-            {
-                // Blender'ı başlat
-                var process = new Process
-                {
-                    StartInfo = new ProcessStartInfo
-                    {
-                        FileName = BlenderPath,
-                        Arguments = "--background --python-expr 'import bpy; bpy.ops.wm.save_as_mainfile(filepath=\"output.blend\")'",
-                        RedirectStandardOutput = true,
-                        RedirectStandardError = true,
-                        UseShellExecute = false,
-                        CreateNoWindow = true
-                    }
-                };
-
-                process.Start();
-                await process.WaitForExitAsync();
-
-                if (process.ExitCode != 0)
-                {
-                    var error = await process.StandardError.ReadToEndAsync();
-                    throw new Exception($"Blender hatası: {error}");
-                }
-
-                return "output.blend";
-            }
-            catch (Exception ex)
-            {
-                throw new Exception($"Model oluşturulurken hata oluştu: {ex.Message}", ex);
+                AddAIMessage("Blender seçimi iptal edildi.");
             }
         }
     }

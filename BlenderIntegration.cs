@@ -6,7 +6,7 @@ namespace AI_3DGen
 {
     public class BlenderIntegration
     {
-        public string BlenderPath { get; set; }
+        public string? BlenderPath { get; set; }
 
         public async Task<string> GenerateModelAsync(string description)
         {
@@ -22,7 +22,7 @@ namespace AI_3DGen
                 {
                     StartInfo = new ProcessStartInfo
                     {
-                        FileName = BlenderPath,
+                        FileName = BlenderPath!,
                         Arguments = "--background --python-expr 'import bpy; bpy.ops.wm.save_as_mainfile(filepath=\"output.blend\")'",
                         RedirectStandardOutput = true,
                         RedirectStandardError = true,

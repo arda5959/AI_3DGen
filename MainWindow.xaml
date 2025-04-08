@@ -31,7 +31,7 @@
             <Setter Property="Padding" Value="15"/>
             <Setter Property="BorderThickness" Value="0"/>
             <Setter Property="TextWrapping" Value="Wrap"/>
-            <Setter Property="AcceptsReturn" Value="True"/>
+            <Setter Property="AcceptsReturn" Value="False"/>
             <Setter Property="VerticalScrollBarVisibility" Value="Auto"/>
             <Setter Property="Template">
                 <Setter.Value>
